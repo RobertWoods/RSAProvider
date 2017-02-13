@@ -20,7 +20,9 @@
             android:name=".RSAContentProvider"
             android:authorities="RSA;PUBLIC"
             android:enabled="true"
-            android:exported="true"></provider>
+            android:exported="true">
+
+        </provider>
     </application>
 
 </manifest>

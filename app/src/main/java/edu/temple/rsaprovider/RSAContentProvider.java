@@ -6,6 +6,9 @@ import android.database.Cursor;
 import android.net.Uri;
 
 public class RSAContentProvider extends ContentProvider {
+
+    EncryptionDbHelper helper;
+
     public RSAContentProvider() {
     }
 
@@ -24,21 +27,28 @@ public class RSAContentProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        // TODO: Implement this to handle requests to insert a new row.
-        throw new UnsupportedOperationException("Not yet implemented");
+        helper.getWritableDatabase().insert(EncryptionDbHelper.KeyContract.TABLE_NAME,
+                null, values);
+        return uri;
     }
 
     @Override
     public boolean onCreate() {
-        // TODO: Implement this to initialize your content provider on startup.
-        return false;
+        helper = new EncryptionDbHelper(getContext());
+        return true;
     }
 
     @Override
     public Cursor query(Uri uri, String[] projection, String selection,
                         String[] selectionArgs, String sortOrder) {
-        // TODO: Implement this to handle query requests from clients.
-        throw new UnsupportedOperationException("Not yet implemented");
+        Cursor c = helper.getWritableDatabase().query(EncryptionDbHelper.KeyContract.TABLE_NAME,
+                projection,
+                selection,
+                selectionArgs,
+                null,
+                null,
+                null);
+        return c;
     }
 
     @Override

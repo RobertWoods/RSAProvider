@@ -1,15 +1,20 @@
 package edu.temple.rsaprovider;
 
+import android.content.ContentValues;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.EditText;
 
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.Cipher;
 
@@ -24,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mEditText = (EditText) findViewById(R.id.encryptEditText);
+//        getContentResolver().query("content://edu.temple.rsaprovider", )
         KeyPairGenerator generator = null;
         try {
             generator = KeyPairGenerator.getInstance("RSA");
@@ -115,6 +121,41 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public ContentValues getValuesForQuery(int id){
+        ContentValues values = new ContentValues();
+        values.put("OWNER", id);
+        return values;
+    }
+
+    public ContentValues getValuesForInsert(int id, KeyPair keyPair){
+        ContentValues values = new ContentValues();
+        values.put("OWNER", id);
+        values.put("PUBLIC", keyPair.getPrivate().getEncoded());
+        values.put("PRIVATE", keyPair.getPublic().getEncoded());
+        return values;
+    }
+
+    public PublicKey getPublicKeyFromBlob(byte[] bytes){
+        try {
+            return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(bytes));
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public PrivateKey getPrivateKeyFromBlob(byte[] bytes){
+        try {
+            return KeyFactory.getInstance("RSA").generatePrivate(new X509EncodedKeySpec(bytes));
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
 
 }
