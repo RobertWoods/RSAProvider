@@ -3,6 +3,7 @@ package edu.temple.rsaprovider;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
 import android.provider.BaseColumns;
 
 /**
@@ -29,7 +30,7 @@ public class EncryptionDbHelper extends SQLiteOpenHelper implements BaseColumns 
         sqLiteDatabase.execSQL(KeyContract.SQL_CREATE_TABLE);
     }
 
-    public static class KeyContract {
+    public static final class KeyContract {
         public static final String TABLE_NAME = "keys";
         public static final String COLUMN_NAME_ID = "keys_id";
         public static final String COLUMN_NAME_OWNER = "keys_owner";
@@ -43,6 +44,11 @@ public class EncryptionDbHelper extends SQLiteOpenHelper implements BaseColumns 
                         COLUMN_NAME_PUBLIC_KEY + " BLOB);";
         private static final String SQL_DELETE_TABLE =
                 "DROP TABLE IF EXISTS " + TABLE_NAME;
+
+        public static final String AUTHORITY =
+                "edu.temple.rsaprovider";
+        public static final Uri CONTENT_URI =
+                Uri.parse("content://" + AUTHORITY);
     }
 
 }

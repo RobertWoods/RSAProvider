@@ -11,6 +11,31 @@
     android:orientation="vertical"
     tools:context="edu.temple.rsaprovider.MainActivity">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/genNewPairButton"
+            android:text="Gen keypair"/>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/getPublicKeyButton"
+            android:text="Get public key"/>
+
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/idEditText"
+            android:hint="id"/>
+
+    </LinearLayout>
+
     <EditText
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

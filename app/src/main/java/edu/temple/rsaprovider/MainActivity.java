@@ -1,12 +1,15 @@
 package edu.temple.rsaprovider;
 
 import android.content.ContentValues;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.EditText;
 
+import java.net.URISyntaxException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -21,7 +24,8 @@ import javax.crypto.Cipher;
 public class MainActivity extends AppCompatActivity {
 
     EditText mEditText;
-    KeyPair keyPair;
+    KeyPair keyPair = null;
+    PublicKey foreignKey = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,14 +33,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mEditText = (EditText) findViewById(R.id.encryptEditText);
-//        getContentResolver().query("content://edu.temple.rsaprovider", )
-        KeyPairGenerator generator = null;
-        try {
-            generator = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        keyPair = generator.generateKeyPair();
         findViewById(R.id.encryptButton).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -56,10 +52,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private PublicKey getPublicKey() {
+        if(foreignKey != null){
+            return foreignKey;
+        }
+        if(keyPair == null){
+
+            foreignKey = null;
+        }
         return keyPair.getPublic();
     }
 
     private PrivateKey getPrivateKey(){
+        if(keyPair == null){
+
+        }
         return keyPair.getPrivate();
     }
 
@@ -121,17 +127,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public ContentValues getValuesForQuery(int id){
-        ContentValues values = new ContentValues();
-        values.put("OWNER", id);
-        return values;
-    }
-
     public ContentValues getValuesForInsert(int id, KeyPair keyPair){
         ContentValues values = new ContentValues();
-        values.put("OWNER", id);
-        values.put("PUBLIC", keyPair.getPrivate().getEncoded());
-        values.put("PRIVATE", keyPair.getPublic().getEncoded());
+        values.put(EncryptionDbHelper.KeyContract.COLUMN_NAME_OWNER, id);
+        values.put(EncryptionDbHelper.KeyContract.COLUMN_NAME_PRIVATE_KEY, keyPair.getPrivate().getEncoded());
+        values.put(EncryptionDbHelper.KeyContract.COLUMN_NAME_PUBLIC_KEY, keyPair.getPublic().getEncoded());
         return values;
     }
 
@@ -157,5 +157,17 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
+    public PublicKey getUsersPublicKey(int id) throws URISyntaxException {
+        Cursor c = getContentResolver().query(EncryptionDbHelper.KeyContract.CONTENT_URI,
+                new String[] { EncryptionDbHelper.KeyContract.COLUMN_NAME_PUBLIC_KEY },
+                "where " + EncryptionDbHelper.KeyContract.COLUMN_NAME_OWNER + " = ?",
+                new String[] { String.valueOf(id) },
+                null,
+                null);
+
+        if(c.moveToFirst())
+            return getPublicKeyFromBlob(c.getBlob(0));
+        return null;
+    }
 
 }

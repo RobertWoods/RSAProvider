@@ -3,7 +3,12 @@ package edu.temple.rsaprovider;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.net.Uri;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 
 public class RSAContentProvider extends ContentProvider {
 
@@ -41,14 +46,32 @@ public class RSAContentProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection,
                         String[] selectionArgs, String sortOrder) {
-        Cursor c = helper.getWritableDatabase().query(EncryptionDbHelper.KeyContract.TABLE_NAME,
-                projection,
-                selection,
-                selectionArgs,
-                null,
-                null,
-                null);
-        return c;
+        if(selection!=null) {
+            Cursor c = helper.getWritableDatabase().query(EncryptionDbHelper.KeyContract.TABLE_NAME,
+                    projection,
+                    selection,
+                    selectionArgs,
+                    null,
+                    null,
+                    null);
+            return c;
+        } else {
+            MatrixCursor c = new MatrixCursor(
+                    new String[] { EncryptionDbHelper.KeyContract.COLUMN_NAME_PUBLIC_KEY,
+                    EncryptionDbHelper.KeyContract.COLUMN_NAME_PRIVATE_KEY }
+            );
+            KeyPair keyPair = null;
+            try {
+                KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+                keyPair = kpg.generateKeyPair();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            if(keyPair != null) {
+                c.addRow(new Object[] { keyPair.getPublic(), keyPair.getPrivate() });
+            }
+            return c;
+        }
     }
 
     @Override
