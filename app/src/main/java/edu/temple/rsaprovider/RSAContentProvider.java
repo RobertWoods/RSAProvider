@@ -5,6 +5,7 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
+import android.util.Log;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -34,6 +35,7 @@ public class RSAContentProvider extends ContentProvider {
     public Uri insert(Uri uri, ContentValues values) {
         helper.getWritableDatabase().insert(EncryptionDbHelper.KeyContract.TABLE_NAME,
                 null, values);
+        Log.d("hey", values.get(EncryptionDbHelper.KeyContract.COLUMN_NAME_OWNER).toString());
         return uri;
     }
 
@@ -68,7 +70,7 @@ public class RSAContentProvider extends ContentProvider {
                 e.printStackTrace();
             }
             if(keyPair != null) {
-                c.addRow(new Object[] { keyPair.getPublic(), keyPair.getPrivate() });
+                c.addRow(new Object[] { keyPair.getPublic().getEncoded(), keyPair.getPrivate().getEncoded() });
             }
             return c;
         }

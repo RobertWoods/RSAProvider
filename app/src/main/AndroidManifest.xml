@@ -18,7 +18,7 @@
 
         <provider
             android:name=".RSAContentProvider"
-            android:authorities="RSA;PUBLIC"
+            android:authorities="edu.temple.rsaprovider"
             android:enabled="true"
             android:exported="true">
 

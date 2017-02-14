@@ -6,8 +6,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import java.net.URISyntaxException;
 import java.security.KeyFactory;
@@ -17,6 +19,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.Cipher;
@@ -24,7 +28,9 @@ import javax.crypto.Cipher;
 public class MainActivity extends AppCompatActivity {
 
     EditText mEditText;
-    KeyPair keyPair = null;
+    EditText mIdEditText;
+    PublicKey domesticPublicKey = null;
+    PrivateKey domesticPrivateKey = null;
     PublicKey foreignKey = null;
 
     @Override
@@ -33,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mEditText = (EditText) findViewById(R.id.encryptEditText);
+        mIdEditText = (EditText) findViewById(R.id.idEditText);
         findViewById(R.id.encryptButton).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -49,24 +56,50 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        findViewById(R.id.genNewPairButton).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                getKeyPair();
+            }
+        });
+
+        findViewById(R.id.getPublicKeyButton).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try {
+                    foreignKey = getUsersPublicKey(Integer.parseInt(mIdEditText.getText().toString()));
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
     }
 
     private PublicKey getPublicKey() {
         if(foreignKey != null){
+            Log.d("hey", "It's not null");
             return foreignKey;
         }
-        if(keyPair == null){
-
-            foreignKey = null;
+        if(domesticPublicKey == null){
+            int id = Integer.parseInt(mIdEditText.getText().toString());
+            getKeyPair();
+            getContentResolver().insert(EncryptionDbHelper.KeyContract.CONTENT_URI,
+                    getValuesForInsert(id, domesticPrivateKey, domesticPublicKey));
         }
-        return keyPair.getPublic();
+
+        Log.d("hey", "It's null");
+        return domesticPublicKey;
     }
 
     private PrivateKey getPrivateKey(){
-        if(keyPair == null){
-
+        if(domesticPrivateKey == null){
+            int id = Integer.parseInt(mIdEditText.getText().toString());
+            getKeyPair();
+            getContentResolver().insert(EncryptionDbHelper.KeyContract.CONTENT_URI,
+                    getValuesForInsert(id, domesticPrivateKey, domesticPublicKey));
         }
-        return keyPair.getPrivate();
+        return domesticPrivateKey;
     }
 
     public String encrypt(String plain, PublicKey pk) {
@@ -127,11 +160,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public ContentValues getValuesForInsert(int id, KeyPair keyPair){
+    public ContentValues getValuesForInsert(int id, PrivateKey privateKey, PublicKey publicKey){
         ContentValues values = new ContentValues();
         values.put(EncryptionDbHelper.KeyContract.COLUMN_NAME_OWNER, id);
-        values.put(EncryptionDbHelper.KeyContract.COLUMN_NAME_PRIVATE_KEY, keyPair.getPrivate().getEncoded());
-        values.put(EncryptionDbHelper.KeyContract.COLUMN_NAME_PUBLIC_KEY, keyPair.getPublic().getEncoded());
+        values.put(EncryptionDbHelper.KeyContract.COLUMN_NAME_PRIVATE_KEY, privateKey.getEncoded());
+        values.put(EncryptionDbHelper.KeyContract.COLUMN_NAME_PUBLIC_KEY, publicKey.getEncoded());
         return values;
     }
 
@@ -143,12 +176,13 @@ public class MainActivity extends AppCompatActivity {
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
+        Log.d("Hmm", "Hmm");
         return null;
     }
 
     public PrivateKey getPrivateKeyFromBlob(byte[] bytes){
         try {
-            return KeyFactory.getInstance("RSA").generatePrivate(new X509EncodedKeySpec(bytes));
+            return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(bytes));
         } catch (InvalidKeySpecException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
@@ -160,14 +194,34 @@ public class MainActivity extends AppCompatActivity {
     public PublicKey getUsersPublicKey(int id) throws URISyntaxException {
         Cursor c = getContentResolver().query(EncryptionDbHelper.KeyContract.CONTENT_URI,
                 new String[] { EncryptionDbHelper.KeyContract.COLUMN_NAME_PUBLIC_KEY },
-                "where " + EncryptionDbHelper.KeyContract.COLUMN_NAME_OWNER + " = ?",
+                EncryptionDbHelper.KeyContract.COLUMN_NAME_OWNER + " = ?",
                 new String[] { String.valueOf(id) },
                 null,
                 null);
 
-        if(c.moveToFirst())
+        if(c.moveToFirst()) {
+            Toast.makeText(this, "Retrieved public key with owner id: " + mIdEditText.getText().toString(), Toast.LENGTH_SHORT).show();
             return getPublicKeyFromBlob(c.getBlob(0));
+        }
         return null;
+    }
+
+    public void getKeyPair(){
+        Cursor c = getContentResolver().query(EncryptionDbHelper.KeyContract.CONTENT_URI,
+                null,
+                null,
+                null,
+                null,
+                null);
+        if(c.moveToFirst()) {
+            domesticPublicKey = getPublicKeyFromBlob(c.getBlob(0));
+            domesticPrivateKey = getPrivateKeyFromBlob(c.getBlob(1));
+            foreignKey = null;
+        }
+        //TODO refactor getValuesForInsert so it automatically gets id
+        int id = Integer.parseInt(mIdEditText.getText().toString());
+        getContentResolver().insert(EncryptionDbHelper.KeyContract.CONTENT_URI,
+                getValuesForInsert(id, domesticPrivateKey, domesticPublicKey));
     }
 
 }
