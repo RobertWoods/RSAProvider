@@ -1,11 +1,16 @@
 package edu.temple.rsaprovider;
 
 import android.content.ContentValues;
+import android.content.Intent;
 import android.database.Cursor;
-import android.net.Uri;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.NfcAdapter;
+import android.nfc.NfcEvent;
 import android.os.Bundle;
-import android.provider.ContactsContract;
+import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -13,31 +18,37 @@ import android.widget.Toast;
 
 import java.net.URISyntaxException;
 import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 import javax.crypto.Cipher;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements NfcAdapter.CreateNdefMessageCallback {
+
+    private final String[] modes = {"Send Key", "Send Text"};
+    private final String[] sentMode = {"K", "T"};
 
     EditText mEditText;
     EditText mIdEditText;
+    NfcAdapter mNfcAdapter;
+
     PublicKey domesticPublicKey = null;
     PrivateKey domesticPrivateKey = null;
     PublicKey foreignKey = null;
+    public int mode = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        if(mNfcAdapter!=null)
+            mNfcAdapter.setNdefPushMessageCallback(this, this);
         mEditText = (EditText) findViewById(R.id.encryptEditText);
         mIdEditText = (EditText) findViewById(R.id.idEditText);
         findViewById(R.id.encryptButton).setOnClickListener(new View.OnClickListener() {
@@ -74,6 +85,44 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        findViewById(R.id.beamModeButton).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mode ^=/*^ one day...*/ 1;
+                Toast.makeText(getBaseContext(), "Mode: " + modes[mode], Toast.LENGTH_SHORT).show();
+            }
+        });
+
+
+
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())){
+            processIntent(getIntent());
+        }
+    }
+
+    private void processIntent(Intent intent) {
+        Parcelable p[] = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+        if(p!=null){
+            NdefMessage m = (NdefMessage) p[0];
+            String message = new String(m.getRecords()[0].getPayload());
+            String messageCode = message.substring(0,1);
+            Log.d("NFC", message);
+            Log.d("NFC", messageCode);
+            message = message.substring(1);
+            if(message.equals(sentMode[0])){
+                //Key sent
+                foreignKey = stringToKey(message);
+            } else {
+                //Message sent
+                mEditText.setText(message);
+            }
+        }
+
     }
 
     private PublicKey getPublicKey() {
@@ -87,7 +136,6 @@ public class MainActivity extends AppCompatActivity {
             getContentResolver().insert(EncryptionDbHelper.KeyContract.CONTENT_URI,
                     getValuesForInsert(id, domesticPrivateKey, domesticPublicKey));
         }
-
         Log.d("hey", "It's null");
         return domesticPublicKey;
     }
@@ -176,7 +224,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-        Log.d("Hmm", "Hmm");
         return null;
     }
 
@@ -219,9 +266,38 @@ public class MainActivity extends AppCompatActivity {
             foreignKey = null;
         }
         //TODO refactor getValuesForInsert so it automatically gets id
-        int id = Integer.parseInt(mIdEditText.getText().toString());
-        getContentResolver().insert(EncryptionDbHelper.KeyContract.CONTENT_URI,
-                getValuesForInsert(id, domesticPrivateKey, domesticPublicKey));
+        try {
+            int id = Integer.parseInt(mIdEditText.getText().toString());
+            getContentResolver().insert(EncryptionDbHelper.KeyContract.CONTENT_URI,
+                    getValuesForInsert(id, domesticPrivateKey, domesticPublicKey));
+        } catch (Exception e){}
     }
 
+    public String keyToString(PublicKey pk){
+        return Base64.encodeToString(pk.getEncoded(), Base64.DEFAULT);
+    }
+
+    public PublicKey stringToKey(String encoded){
+        X509EncodedKeySpec x509EncodedKeySpec
+                = new X509EncodedKeySpec(Base64.decode(encoded, Base64.DEFAULT));
+        try {
+            return KeyFactory.getInstance("RSA").generatePublic(x509EncodedKeySpec);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public NdefMessage createNdefMessage(NfcEvent nfcEvent) {
+        String text = sentMode[mode];
+        if(modes[mode].equals(modes[0])) {
+            text += keyToString(domesticPublicKey);
+        } else {
+            text += mEditText.getText().toString();
+        }
+        Log.d("NFC", "Message: " + text);
+        return new NdefMessage( new NdefRecord[] {
+                NdefRecord.createMime("application/edu.temple.rsaprovider", text.getBytes()) } );
+    }
 }

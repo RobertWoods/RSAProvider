@@ -40,6 +40,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/encryptEditText"
+        android:textSize="16sp"
         android:hint="Enter text to be encrypted/decrypted" />
 
     <LinearLayout
@@ -59,6 +60,12 @@
             android:layout_height="wrap_content"
             android:id="@+id/decryptButton"
             android:text="Decrypt"/>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/beamModeButton"
+            android:text="Mode"/>
 
 
     </LinearLayout>
