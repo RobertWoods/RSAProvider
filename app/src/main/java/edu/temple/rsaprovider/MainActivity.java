@@ -170,7 +170,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
             cipher.init(Cipher.ENCRYPT_MODE, pk);
             bytes = cipher.doFinal(plain.getBytes());
         } catch (Exception e) {}
-        return byteToHex(bytes);
+        return new String(Base64.encode(bytes, Base64.DEFAULT));
     }
 
     public String decrypt(String encrypted, PrivateKey pk){
@@ -178,47 +178,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
         try {
             Cipher cipher = Cipher.getInstance("RSA");
             cipher.init(Cipher.DECRYPT_MODE, pk);
-            byte[] bytes = cipher.doFinal(hexToByte(encrypted));
+            byte[] bytes = cipher.doFinal(Base64.decode(encrypted.getBytes(), Base64.DEFAULT));
             decrypted = new String(bytes, "UTF-8");
         } catch (Exception e) {
             e.printStackTrace();
         }
         return decrypted;
-    }
-
-    public String byteToHex(byte[] bytes){
-        String hex = "";
-        for(byte b : bytes){
-            hex += String.format("%02X", b);
-        }
-        return hex;
-    }
-
-    public byte[] hexToByte(String hex){
-        byte[] bytes = new byte[hex.length()/2];
-        for(int i=0;i<hex.length();i+=2){
-            bytes[i/2] = (byte) (hexToInt(hex.charAt(i))*16 + hexToInt(hex.charAt(i+1)));
-        }
-        return bytes;
-    }
-
-    public int hexToInt(char hex){
-        switch (hex){
-            case 'A':
-                return 10;
-            case 'B':
-                return 11;
-            case 'C':
-                return 12;
-            case 'D':
-                return 13;
-            case 'E':
-                return 14;
-            case 'F':
-                return 15;
-            default:
-                return Integer.parseInt(""+hex);
-        }
     }
 
     public ContentValues getValuesForInsert(int id, PrivateKey privateKey, PublicKey publicKey){
@@ -232,9 +197,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
     public PublicKey getPublicKeyFromBlob(byte[] bytes){
         try {
             return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(bytes));
-        } catch (InvalidKeySpecException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
+        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
         return null;
@@ -243,9 +206,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
     public PrivateKey getPrivateKeyFromBlob(byte[] bytes){
         try {
             return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(bytes));
-        } catch (InvalidKeySpecException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
+        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
         return null;

@@ -36,7 +36,7 @@ public class EncryptionDbHelper extends SQLiteOpenHelper implements BaseColumns 
         public static final String COLUMN_NAME_OWNER = "keys_owner";
         public static final String COLUMN_NAME_PRIVATE_KEY = "keys_private_key";
         public static final String COLUMN_NAME_PUBLIC_KEY = "keys_public_key";
-        public static final String SQL_CREATE_TABLE =
+        private static final String SQL_CREATE_TABLE =
                 "CREATE TABLE " + TABLE_NAME + " (" +
                         COLUMN_NAME_ID + " INTEGER PRIMARY KEY," +
                         COLUMN_NAME_OWNER + " INTEGER UNIQUE," +
@@ -45,7 +45,7 @@ public class EncryptionDbHelper extends SQLiteOpenHelper implements BaseColumns 
         private static final String SQL_DELETE_TABLE =
                 "DROP TABLE IF EXISTS " + TABLE_NAME;
 
-        public static final String AUTHORITY =
+        private static final String AUTHORITY =
                 "edu.temple.rsaprovider";
         public static final Uri CONTENT_URI =
                 Uri.parse("content://" + AUTHORITY);
