@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
     PublicKey domesticPublicKey = null;
     PrivateKey domesticPrivateKey = null;
     PublicKey foreignKey = null;
+    PrivateKey nfcForeignKey = null;
     public int mode = 0;
 
     @Override
@@ -105,6 +106,14 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
         }
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction())) {
+            processIntent(intent);
+        }
+    }
+
     private void processIntent(Intent intent) {
         Parcelable p[] = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
         if(p!=null){
@@ -114,13 +123,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
             Log.d("NFC", message);
             Log.d("NFC", messageCode);
             message = message.substring(1);
-            if(message.equals(sentMode[0])){
+            if(messageCode.equals(sentMode[0])){
                 //Key sent
-                foreignKey = stringToKey(message);
+                nfcForeignKey = stringToKey(message);
             } else {
                 //Message sent
                 mEditText.setText(message);
             }
+        } else {
+            Log.d("NFC", "Parcelable was empty");
         }
 
     }
@@ -141,7 +152,9 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
     }
 
     private PrivateKey getPrivateKey(){
-        if(domesticPrivateKey == null){
+        if(nfcForeignKey != null){
+            return nfcForeignKey;
+        } else if(domesticPrivateKey == null){
             int id = Integer.parseInt(mIdEditText.getText().toString());
             getKeyPair();
             getContentResolver().insert(EncryptionDbHelper.KeyContract.CONTENT_URI,
@@ -273,15 +286,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
         } catch (Exception e){}
     }
 
-    public String keyToString(PublicKey pk){
+    public String keyToString(PrivateKey pk){
         return Base64.encodeToString(pk.getEncoded(), Base64.DEFAULT);
     }
 
-    public PublicKey stringToKey(String encoded){
-        X509EncodedKeySpec x509EncodedKeySpec
-                = new X509EncodedKeySpec(Base64.decode(encoded, Base64.DEFAULT));
+    public PrivateKey stringToKey(String encoded){
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec
+                = new PKCS8EncodedKeySpec(Base64.decode(encoded, Base64.DEFAULT));
         try {
-            return KeyFactory.getInstance("RSA").generatePublic(x509EncodedKeySpec);
+            return KeyFactory.getInstance("RSA").generatePrivate(pkcs8EncodedKeySpec);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -292,7 +305,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Create
     public NdefMessage createNdefMessage(NfcEvent nfcEvent) {
         String text = sentMode[mode];
         if(modes[mode].equals(modes[0])) {
-            text += keyToString(domesticPublicKey);
+            text += keyToString(domesticPrivateKey);
         } else {
             text += mEditText.getText().toString();
         }
